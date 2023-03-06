@@ -2,6 +2,7 @@ package com.daniel.dailyshoppee.product;
 
 
 import com.daniel.dailyshoppee.exception.ProductNotFound;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,7 +45,7 @@ public class ProductController {
     }
 
     @PostMapping(path = "/products")
-    public ResponseEntity<Product> createProduct(@RequestBody Product product){
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product){
         Product savedProduct = productRespository.save(product);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(savedProduct.getId()).toUri();
         return ResponseEntity.created(location).build();
