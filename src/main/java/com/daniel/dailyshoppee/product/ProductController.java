@@ -2,10 +2,16 @@ package com.daniel.dailyshoppee.product;
 
 
 import com.daniel.dailyshoppee.exception.ProductNotFound;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -19,17 +25,26 @@ public class ProductController {
     private ProductRespository productRespository;
 
     @GetMapping(path = "/products")
-    public ResponseEntity<List<Product>> getAllProducts(){
-        return new ResponseEntity<List<Product>>(this.productRespository.findAll(),HttpStatus.OK);
+    public ResponseEntity<MappingJacksonValue> getAllProducts(){
+        List<Product> products = this.productRespository.findAll();
+        MappingJacksonValue mappingJacksonValue = new MappingJacksonValue(products);
+        SimpleBeanPropertyFilter filter = SimpleBeanPropertyFilter.filterOutAllExcept("product_name");
+        FilterProvider filters = new SimpleFilterProvider().addFilter("ProductBeanFilter",filter);
+        mappingJacksonValue.setFilters(filters);
+        return new ResponseEntity<MappingJacksonValue>(mappingJacksonValue,HttpStatus.OK);
     }
 
     @GetMapping(path = "/products/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable int id){
+    public EntityModel<Product> getProduct(@PathVariable int id){
         Product product = productRespository.findById(id).orElse(null);
         if(product == null){
             throw new ProductNotFound("There is no product associated with this ID: "+id);
         }
-        return new ResponseEntity<Product>(product,HttpStatus.OK);
+        EntityModel<Product> entityModel = EntityModel.of(product);
+        WebMvcLinkBuilder link = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).getAllProducts());
+//        return new ResponseEntity<Product>(product,HttpStatus.OK);
+        entityModel.add(link.withRel("all-products"));
+        return entityModel;
     }
 
     @DeleteMapping(path = "/products/{id}")
